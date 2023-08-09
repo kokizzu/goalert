@@ -109,7 +109,7 @@
     "remark-gfm": "3.0.1",
     "stylelint": "15.10.1",
     "stylelint-config-standard": "34.0.0",
-    "typescript": "5.0.4",
+    "typescript": "5.1.6",
     "urql": "4.0.4",
     "wonka": "6.3.2",
     "wouter": "2.11.0"
