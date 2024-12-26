@@ -100,7 +100,7 @@
     "eslint-config-prettier": "9.1.0",
     "eslint-config-standard": "17.1.0",
     "eslint-config-standard-jsx": "11.0.0",
-    "eslint-plugin-cypress": "3.5.0",
+    "eslint-plugin-cypress": "4.1.0",
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-n": "17.15.1",
