@@ -451,6 +451,7 @@ const (
 	EnumOutgoingMessagesStatusFailed         EnumOutgoingMessagesStatus = "failed"
 	EnumOutgoingMessagesStatusPending        EnumOutgoingMessagesStatus = "pending"
 	EnumOutgoingMessagesStatusQueuedRemotely EnumOutgoingMessagesStatus = "queued_remotely"
+	EnumOutgoingMessagesStatusRead           EnumOutgoingMessagesStatus = "read"
 	EnumOutgoingMessagesStatusSending        EnumOutgoingMessagesStatus = "sending"
 	EnumOutgoingMessagesStatusSent           EnumOutgoingMessagesStatus = "sent"
 )
@@ -1038,6 +1039,14 @@ type Label struct {
 	Key          string
 	TgtServiceID uuid.UUID
 	Value        string
+}
+
+type MessageStatusHistory struct {
+	ID            int64
+	MessageID     uuid.UUID
+	Status        EnumOutgoingMessagesStatus
+	StatusDetails string
+	Timestamp     time.Time
 }
 
 type NotificationChannel struct {
