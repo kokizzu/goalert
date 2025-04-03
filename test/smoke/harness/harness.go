@@ -81,8 +81,10 @@ type Harness struct {
 
 	appPool *pgxpool.Pool
 
-	msgSvcID string
-	expFlags expflag.FlagSet
+	rcsSenderID string
+	rcsMsgSvcID string
+	msgSvcID    string
+	expFlags    expflag.FlagSet
 
 	tw  *twilioAssertionAPI
 	twS *httptest.Server
@@ -177,7 +179,7 @@ func NewStoppedHarnessWithFlags(t *testing.T, initSQL string, sqlData interface{
 	}
 
 	t.Logf("Using DB URL: %s", dbURL)
-	name := strings.Replace("smoketest_"+time.Now().Format("2006_01_02_15_04_05")+uuid.New().String(), "-", "", -1)
+	name := strings.ReplaceAll("smoketest_"+time.Now().Format("2006_01_02_15_04_05")+uuid.New().String(), "-", "")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -253,6 +255,11 @@ func NewStoppedHarnessWithFlags(t *testing.T, initSQL string, sqlData interface{
 }
 
 func (h *Harness) Start() {
+	h.t.Helper()
+	h.StartWithAppCfgHook(nil)
+}
+
+func (h *Harness) StartWithAppCfgHook(fn func(*app.Config)) {
 	h.t.Helper()
 
 	var cfg config.Config
@@ -331,6 +338,10 @@ func (h *Harness) Start() {
 	h.appPool, err = pgxpool.NewWithConfig(ctx, poolCfg)
 	require.NoError(h.t, err, "create pgx pool")
 
+	if fn != nil {
+		fn(&appCfg)
+	}
+
 	h.backend, err = app.NewApp(appCfg, h.appPool)
 	if err != nil {
 		h.t.Fatalf("failed to start backend: %v", err)
@@ -350,6 +361,14 @@ func (h *Harness) Start() {
 // RestartGoAlertWithConfig will restart the backend with the provided config.
 func (h *Harness) RestartGoAlertWithConfig(cfg config.Config) {
 	h.t.Helper()
+	h.RestartGoAlertWithAppCfgHook(func(c *app.Config) {
+		c.InitialConfig = &cfg
+	})
+}
+
+// RestartGoAlertWithAppCfgHook will restart the backend with the provided config hook.
+func (h *Harness) RestartGoAlertWithAppCfgHook(reconfig func(*app.Config)) {
+	h.t.Helper()
 
 	h.t.Logf("Stopping backend for restart")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -361,7 +380,7 @@ func (h *Harness) RestartGoAlertWithConfig(cfg config.Config) {
 	}
 
 	h.t.Logf("Restarting backend")
-	h.appCfg.InitialConfig = &cfg
+	reconfig(&h.appCfg)
 	h.backend, err = app.NewApp(h.appCfg, h.appPool)
 	if err != nil {
 		h.t.Fatalf("failed to start backend: %v", err)
@@ -664,7 +683,7 @@ func (h *Harness) dumpDB() {
 
 // Close terminates any background processes, and drops the testing database.
 // It should be called at the end of all tests (usually with `defer h.Close()`).
-func (h *Harness) Close() error {
+func (h *Harness) Close() {
 	h.t.Helper()
 	if recErr := recover(); recErr != nil {
 		defer panic(recErr)
@@ -705,13 +724,11 @@ func (h *Harness) Close() error {
 	if err != nil {
 		h.t.Errorf("failed to drop database '%s': %v", h.dbName, err)
 	}
-
-	return nil
 }
 
 // SetCarrierName will set the carrier name for the given phone number.
 func (h *Harness) SetCarrierName(number, name string) {
-	h.tw.Server.SetCarrierInfo(number, twilio.CarrierInfo{Name: name})
+	h.tw.SetCarrierInfo(number, twilio.CarrierInfo{Name: name})
 }
 
 // TwilioNumber will return a registered (or register if missing) Twilio number for the given ID.
@@ -751,6 +768,29 @@ func (h *Harness) TwilioMessagingService() string {
 
 	h.msgSvcID = newID
 	return newID
+}
+
+// TwilioMessagingServiceRCS will return the id and phone numbers for the mock messaging service with RCS enabled.
+func (h *Harness) TwilioMessagingServiceRCS() (rcs, msg string) {
+	h.mx.Lock()
+	defer h.mx.Unlock()
+	if h.rcsSenderID != "" {
+		return h.rcsSenderID, h.rcsMsgSvcID
+	}
+
+	nums := []string{h.phoneCCG.Get("twilio:rcs:sid1"), h.phoneCCG.Get("twilio:rcs:sid2"), h.phoneCCG.Get("twilio:rcs:sid3")}
+	newID, err := h.tw.NewMessagingService(h.URL()+"/v1/twilio/sms/messages", nums...)
+	if err != nil {
+		panic(err)
+	}
+
+	h.rcsMsgSvcID = newID
+
+	rcsID, err := h.tw.EnableRCS(newID)
+	require.NoError(h.t, err)
+	h.rcsSenderID = rcsID
+
+	return rcsID, newID
 }
 
 // CreateUser generates a random user.
