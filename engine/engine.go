@@ -291,7 +291,7 @@ func (p *Engine) _resume(ctx context.Context) error {
 		return errors.Wrap(err, "resume river")
 	}
 
-	go p.startRiver()
+	p.startRiver()
 
 	return nil
 }
@@ -591,7 +591,7 @@ func (p *Engine) _run(ctx context.Context) error {
 	}
 
 	p.runCtx = ctx
-	go p.startRiver()
+	p.startRiver()
 
 	dur := p.cfg.CycleTime
 	if dur == 0 {
