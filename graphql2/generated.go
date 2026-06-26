@@ -314,6 +314,7 @@ type ComplexityRoot struct {
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
 		IsFavorite  func(childComplexity int) int
+		Labels      func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Notices     func(childComplexity int) int
 		Repeat      func(childComplexity int) int
@@ -632,6 +633,7 @@ type ComplexityRoot struct {
 		Description      func(childComplexity int) int
 		ID               func(childComplexity int) int
 		IsFavorite       func(childComplexity int) int
+		Labels           func(childComplexity int) int
 		Name             func(childComplexity int) int
 		NextHandoffTimes func(childComplexity int, num *int) int
 		ShiftLength      func(childComplexity int) int
@@ -678,6 +680,7 @@ type ComplexityRoot struct {
 		Description             func(childComplexity int) int
 		ID                      func(childComplexity int) int
 		IsFavorite              func(childComplexity int) int
+		Labels                  func(childComplexity int) int
 		Name                    func(childComplexity int) int
 		OnCallNotificationRules func(childComplexity int) int
 		Shifts                  func(childComplexity int, start time.Time, end time.Time, userIDs []string) int
@@ -919,6 +922,7 @@ type EscalationPolicyResolver interface {
 	AssignedTo(ctx context.Context, obj *escalation.Policy) ([]assignment.RawTarget, error)
 	Steps(ctx context.Context, obj *escalation.Policy) ([]escalation.Step, error)
 	Notices(ctx context.Context, obj *escalation.Policy) ([]notice.Notice, error)
+	Labels(ctx context.Context, obj *escalation.Policy) ([]label.Label, error)
 }
 type EscalationPolicyStepResolver interface {
 	Targets(ctx context.Context, obj *escalation.Step) ([]assignment.RawTarget, error)
@@ -1081,6 +1085,7 @@ type RotationResolver interface {
 	UserIDs(ctx context.Context, obj *rotation.Rotation) ([]string, error)
 	Users(ctx context.Context, obj *rotation.Rotation) ([]user.User, error)
 	NextHandoffTimes(ctx context.Context, obj *rotation.Rotation, num *int) ([]time.Time, error)
+	Labels(ctx context.Context, obj *rotation.Rotation) ([]label.Label, error)
 }
 type ScheduleResolver interface {
 	TimeZone(ctx context.Context, obj *schedule.Schedule) (string, error)
@@ -1091,6 +1096,7 @@ type ScheduleResolver interface {
 	IsFavorite(ctx context.Context, obj *schedule.Schedule) (bool, error)
 	TemporarySchedules(ctx context.Context, obj *schedule.Schedule) ([]schedule.TemporarySchedule, error)
 	OnCallNotificationRules(ctx context.Context, obj *schedule.Schedule) ([]schedule.OnCallNotificationRule, error)
+	Labels(ctx context.Context, obj *schedule.Schedule) ([]label.Label, error)
 }
 type ScheduleRuleResolver interface {
 	Target(ctx context.Context, obj *rule.Rule) (*assignment.RawTarget, error)
@@ -2008,6 +2014,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.EscalationPolicy.IsFavorite(childComplexity), true
+	case "EscalationPolicy.labels":
+		if e.ComplexityRoot.EscalationPolicy.Labels == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EscalationPolicy.Labels(childComplexity), true
 	case "EscalationPolicy.name":
 		if e.ComplexityRoot.EscalationPolicy.Name == nil {
 			break
@@ -3900,6 +3912,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Rotation.IsFavorite(childComplexity), true
+	case "Rotation.labels":
+		if e.ComplexityRoot.Rotation.Labels == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Rotation.Labels(childComplexity), true
 	case "Rotation.name":
 		if e.ComplexityRoot.Rotation.Name == nil {
 			break
@@ -4096,6 +4114,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Schedule.IsFavorite(childComplexity), true
+	case "Schedule.labels":
+		if e.ComplexityRoot.Schedule.Labels == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Schedule.Labels(childComplexity), true
 	case "Schedule.name":
 		if e.ComplexityRoot.Schedule.Name == nil {
 			break
@@ -5511,6 +5535,8 @@ func (ec *executionContext) childFields_EscalationPolicy(ctx context.Context, fi
 		return ec.fieldContext_EscalationPolicy_steps(ctx, field)
 	case "notices":
 		return ec.fieldContext_EscalationPolicy_notices(ctx, field)
+	case "labels":
+		return ec.fieldContext_EscalationPolicy_labels(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type EscalationPolicy", field.Name)
 }
@@ -5927,6 +5953,8 @@ func (ec *executionContext) childFields_Rotation(ctx context.Context, field grap
 		return ec.fieldContext_Rotation_users(ctx, field)
 	case "nextHandoffTimes":
 		return ec.fieldContext_Rotation_nextHandoffTimes(ctx, field)
+	case "labels":
+		return ec.fieldContext_Rotation_labels(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Rotation", field.Name)
 }
@@ -6017,6 +6045,8 @@ func (ec *executionContext) childFields_Schedule(ctx context.Context, field grap
 		return ec.fieldContext_Schedule_temporarySchedules(ctx, field)
 	case "onCallNotificationRules":
 		return ec.fieldContext_Schedule_onCallNotificationRules(ctx, field)
+	case "labels":
+		return ec.fieldContext_Schedule_labels(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Schedule", field.Name)
 }
@@ -11541,6 +11571,38 @@ func (ec *executionContext) fieldContext_EscalationPolicy_notices(_ context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Notice(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EscalationPolicy_labels(ctx context.Context, field graphql.CollectedField, obj *escalation.Policy) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EscalationPolicy_labels(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.EscalationPolicy().Labels(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []label.Label) graphql.Marshaler {
+			return ec.marshalNLabel2ᚕgithubᚗcomᚋtargetᚋgoalertᚋlabelᚐLabelᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EscalationPolicy_labels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EscalationPolicy",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Label(ctx, field)
 		},
 	}
 	return fc, nil
@@ -19493,6 +19555,38 @@ func (ec *executionContext) fieldContext_Rotation_nextHandoffTimes(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Rotation_labels(ctx context.Context, field graphql.CollectedField, obj *rotation.Rotation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Rotation_labels(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Rotation().Labels(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []label.Label) graphql.Marshaler {
+			return ec.marshalNLabel2ᚕgithubᚗcomᚋtargetᚋgoalertᚋlabelᚐLabelᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Rotation_labels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Rotation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Label(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RotationConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *RotationConnection) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -20292,6 +20386,38 @@ func (ec *executionContext) fieldContext_Schedule_onCallNotificationRules(_ cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_OnCallNotificationRule(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Schedule_labels(ctx context.Context, field graphql.CollectedField, obj *schedule.Schedule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Schedule_labels(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Schedule().Labels(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []label.Label) graphql.Marshaler {
+			return ec.marshalNLabel2ᚕgithubᚗcomᚋtargetᚋgoalertᚋlabelᚐLabelᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Schedule_labels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Schedule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Label(ctx, field)
 		},
 	}
 	return fc, nil
@@ -25238,7 +25364,7 @@ func (ec *executionContext) unmarshalInputCreateEscalationPolicyInput(ctx contex
 		asMap["repeat"] = 3
 	}
 
-	fieldsInOrder := [...]string{"name", "description", "repeat", "favorite", "steps"}
+	fieldsInOrder := [...]string{"name", "description", "repeat", "favorite", "steps", "labels"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -25280,6 +25406,13 @@ func (ec *executionContext) unmarshalInputCreateEscalationPolicyInput(ctx contex
 				return it, err
 			}
 			it.Steps = data
+		case "labels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labels"))
+			data, err := ec.unmarshalOSetLabelInput2ᚕgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetLabelInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Labels = data
 		}
 	}
 	return it, nil
@@ -25534,7 +25667,7 @@ func (ec *executionContext) unmarshalInputCreateRotationInput(ctx context.Contex
 		asMap["shiftLength"] = 1
 	}
 
-	fieldsInOrder := [...]string{"name", "description", "timeZone", "start", "favorite", "type", "shiftLength", "userIDs"}
+	fieldsInOrder := [...]string{"name", "description", "timeZone", "start", "favorite", "type", "shiftLength", "userIDs", "labels"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -25597,6 +25730,13 @@ func (ec *executionContext) unmarshalInputCreateRotationInput(ctx context.Contex
 				return it, err
 			}
 			it.UserIDs = data
+		case "labels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labels"))
+			data, err := ec.unmarshalOSetLabelInput2ᚕgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetLabelInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Labels = data
 		}
 	}
 	return it, nil
@@ -25613,7 +25753,7 @@ func (ec *executionContext) unmarshalInputCreateScheduleInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "description", "timeZone", "favorite", "targets", "newUserOverrides"}
+	fieldsInOrder := [...]string{"name", "description", "timeZone", "favorite", "targets", "newUserOverrides", "labels"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -25662,6 +25802,13 @@ func (ec *executionContext) unmarshalInputCreateScheduleInput(ctx context.Contex
 				return it, err
 			}
 			it.NewUserOverrides = data
+		case "labels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labels"))
+			data, err := ec.unmarshalOSetLabelInput2ᚕgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetLabelInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Labels = data
 		}
 	}
 	return it, nil
@@ -31481,6 +31628,42 @@ func (ec *executionContext) _EscalationPolicy(ctx context.Context, sel ast.Selec
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "labels":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._EscalationPolicy_labels(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -35420,6 +35603,42 @@ func (ec *executionContext) _Rotation(ctx context.Context, sel ast.SelectionSet,
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "labels":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Rotation_labels(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -35962,6 +36181,42 @@ func (ec *executionContext) _Schedule(ctx context.Context, sel ast.SelectionSet,
 					}
 				}()
 				res = ec._Schedule_onCallNotificationRules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "labels":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Schedule_labels(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
